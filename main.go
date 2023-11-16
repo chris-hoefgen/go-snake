@@ -13,22 +13,24 @@ package main
 // For more info see docs.battlesnake.com
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 )
 
 // info is called when you create your Battlesnake on play.battlesnake.com
 // and controls your Battlesnake's appearance
-// TIP: If you open your Battlesnake URL in a browser you should see this data
 func info() BattlesnakeInfoResponse {
 	log.Println("INFO")
 
+	colour := fmt.Sprintf("#%02X%02X%02X", rand.Intn(255), rand.Intn(255), rand.Intn(255))
+
 	return BattlesnakeInfoResponse{
 		APIVersion: "1",
-		Author:     "",        // TODO: Your Battlesnake username
-		Color:      "#888888", // TODO: Choose color
-		Head:       "default", // TODO: Choose head
-		Tail:       "default", // TODO: Choose tail
+		Author:     "chris-hoefgen",
+		Color:      colour,
+		Head:       snakeHeads[rand.Intn(len(snakeHeads))],
+		Tail:       snakeTails[rand.Intn(len(snakeTails))],
 	}
 }
 
@@ -42,66 +44,57 @@ func end(state GameState) {
 	log.Printf("GAME OVER\n\n")
 }
 
+func applyMove(move Move, snake *Battlesnake) Coord {
+	return Coord{X: snake.Head.X + move.Direction.X, Y: snake.Head.Y + move.Direction.Y}
+}
+
+
 // move is called on every turn and returns your next move
 // Valid moves are "up", "down", "left", or "right"
 // See https://docs.battlesnake.com/api/example-move for available data
 func move(state GameState) BattlesnakeMoveResponse {
+	gameBoard, err := NewGameBoard(&state.Board, &state.You)
 
-	isMoveSafe := map[string]bool{
-		"up":    true,
-		"down":  true,
-		"left":  true,
-		"right": true,
+	if err != nil {
+		log.Fatal(err)
+		return BattlesnakeMoveResponse{Move: "up"}
 	}
 
-	// We've included code to prevent your Battlesnake from moving backwards
-	myHead := state.You.Body[0] // Coordinates of your head
-	myNeck := state.You.Body[1] // Coordinates of your "neck"
+	left := Move{Name: "left", Direction: Coord{ X: -1, Y: 0}}
+	right := Move{Name: "right", Direction: Coord{ X: 1, Y: 0}}
+	up := Move{Name: "up", Direction: Coord{ X: 0, Y: 1}}
+	down := Move{Name: "down", Direction: Coord{ X: 0, Y: -1}}
 
-	if myNeck.X < myHead.X { // Neck is left of head, don't move left
-		isMoveSafe["left"] = false
+	allMoves := []Move{left, right, up, down}
+	moveOptions := []Move{}
+	copy(moveOptions, allMoves)
 
-	} else if myNeck.X > myHead.X { // Neck is right of head, don't move right
-		isMoveSafe["right"] = false
+	for i := 0; i < len(allMoves); i++ {
+		newPos := applyMove(allMoves[i], &state.You)
 
-	} else if myNeck.Y < myHead.Y { // Neck is below head, don't move down
-		isMoveSafe["down"] = false
-
-	} else if myNeck.Y > myHead.Y { // Neck is above head, don't move up
-		isMoveSafe["up"] = false
-	}
-
-	// TODO: Step 1 - Prevent your Battlesnake from moving out of bounds
-	// boardWidth := state.Board.Width
-	// boardHeight := state.Board.Height
-
-	// TODO: Step 2 - Prevent your Battlesnake from colliding with itself
-	// mybody := state.You.Body
-
-	// TODO: Step 3 - Prevent your Battlesnake from colliding with other Battlesnakes
-	// opponents := state.Board.Snakes
-
-	// Are there any safe moves left?
-	safeMoves := []string{}
-	for move, isSafe := range isMoveSafe {
-		if isSafe {
-			safeMoves = append(safeMoves, move)
+		if gameBoard.IsOutOfBounds(newPos) {
+			continue
+		} else if gameBoard.IsASnake(newPos) {
+			continue
 		}
+		
+		// A legal move, add it to the candidate list
+		moveOptions = append(moveOptions, allMoves[i])
 	}
 
-	if len(safeMoves) == 0 {
+	if len(moveOptions) == 0 {
 		log.Printf("MOVE %d: No safe moves detected! Moving down\n", state.Turn)
 		return BattlesnakeMoveResponse{Move: "down"}
 	}
 
 	// Choose a random move from the safe ones
-	nextMove := safeMoves[rand.Intn(len(safeMoves))]
+	nextMove := moveOptions[rand.Intn(len(moveOptions))]
 
 	// TODO: Step 4 - Move towards food instead of random, to regain health and survive longer
 	// food := state.Board.Food
 
-	log.Printf("MOVE %d: %s\n", state.Turn, nextMove)
-	return BattlesnakeMoveResponse{Move: nextMove}
+	log.Printf("MOVE %d: %s\n", state.Turn, nextMove.Name)
+	return BattlesnakeMoveResponse{Move: nextMove.Name}
 }
 
 func main() {

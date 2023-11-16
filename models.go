@@ -76,3 +76,39 @@ type BattlesnakeMoveResponse struct {
 	Move  string `json:"move"`
 	Shout string `json:"shout"`
 }
+
+type Move struct {
+	Name string
+	Direction Coord
+}
+
+var snakeHeads = []string{
+	"regular",
+    "beluga",
+    "bendr",
+    "dead",
+    "evil",
+    "fang",
+    "pixel",
+    "safe",
+    "sand-worm",
+    "shades",
+    "silly",
+    "smile",
+    "tongue",
+}
+
+var snakeTails = []string{
+	"regular",
+    "block-bum",
+    "bolt",
+    "curled",
+    "fat-rattle",
+    "freckled",
+    "hook",
+    "pixel",
+    "round-bum",
+    "sharp",
+    "skinny",
+    "small-rattle",
+}
